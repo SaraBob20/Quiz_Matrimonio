@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz - Sara &amp; Dario</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #fff0f4;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .quiz-wrap { max-width: 600px; width: 100%; }
+
+    header { text-align: center; margin-bottom: 2rem; }
+    header h1 { font-size: 28px; font-weight: 700; color: #c94070; letter-spacing: -0.02em; }
+    header p { font-size: 14px; color: #a07080; margin-top: 4px; }
+
+    .progress-bar-bg { height: 5px; background: #f5c0d0; border-radius: 3px; margin-bottom: 1.5rem; }
+    .progress-bar-fill { height: 5px; background: #D4537E; border-radius: 3px; transition: width 0.4s ease; }
+
+    .step-indicator { font-size: 13px; color: #b08090; margin-bottom: 1.25rem; }
+
+    .question-card {
+      background: #ffffff;
+      border: 1px solid #f5c0d0;
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 16px rgba(212, 83, 126, 0.07);
+    }
+
+    .q-label { font-size: 11px; color: #D4537E; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 0.6rem; }
+    .q-text { font-size: 17px; font-weight: 600; color: #2a1020; line-height: 1.5; margin-bottom: 1.25rem; }
+
+    .options { display: flex; flex-direction: column; gap: 8px; }
+
+    .opt-btn {
+      background: #fff8fa; border: 1px solid #f5c0d0; border-radius: 10px;
+      padding: 13px 18px; font-size: 15px; color: #3a1828; cursor: pointer;
+      text-align: left; transition: all 0.15s; font-family: inherit;
+    }
+    .opt-btn:hover:not(:disabled) { border-color: #D4537E; background: #fdeef4; }
+    .opt-btn.correct { background: #e8f7e8; border-color: #4caf50; color: #1b5e20; font-weight: 600; }
+    .opt-btn.wrong { background: #fdecea; border-color: #e53935; color: #b71c1c; }
+    .opt-btn.reveal { background: #e8f7e8; border-color: #4caf50; color: #2e7d32; opacity: 0.65; }
+    .opt-btn:disabled { cursor: default; }
+
+    .nav-row { display: flex; justify-content: flex-end; margin-top: 1rem; }
+
+    .next-btn {
+      background: #D4537E; color: white; border: none; border-radius: 10px;
+      padding: 11px 26px; font-size: 15px; font-weight: 600; cursor: pointer;
+      opacity: 0; transition: opacity 0.3s, background 0.15s;
+      pointer-events: none; font-family: inherit;
+    }
+    .next-btn.show { opacity: 1; pointer-events: all; }
+    .next-btn:hover { background: #b8375f; }
+
+    .drag-instruction { font-size: 14px; color: #7a5060; margin-bottom: 1.25rem; line-height: 1.6; }
+
+    .photo-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+
+    .photo-card {
+      width: 120px; height: 120px; background: #fff8fa;
+      border: 1.5px solid #f5c0d0; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: grab; user-select: none; transition: all 0.15s;
+    }
+    .photo-card:hover { border-color: #D4537E; }
+    .photo-card.dragging { opacity: 0.35; transform: scale(0.95); }
+    .photo-card.drag-over { border-color: #D4537E; border-width: 2px; background: #fdeef4; }
+
+    .photo-num { font-size: 36px; font-weight: 700; color: #c94070; }
+    .photo-label { font-size: 11px; color: #b08090; margin-top: 4px; }
+
+    .order-label { font-size: 13px; color: #b08090; margin-bottom: 0.6rem; }
+    .order-display { display: flex; gap: 8px; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .order-slot {
+      width: 50px; height: 50px; background: #fff0f4; border: 1px solid #f5c0d0;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: #c94070;
+    }
+    .order-arrow { font-size: 16px; color: #d4a0b0; }
+
+    .check-btn {
+      background: #D4537E; color: white; border: none; border-radius: 10px;
+      padding: 11px 26px; font-size: 15px; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: background 0.15s;
+    }
+    .check-btn:hover:not(:disabled) { background: #b8375f; }
+    .check-btn:disabled { opacity: 0.45; cursor: default; }
+
+    .drag-result {
+      font-size: 15px; font-weight: 500; margin-top: 1rem;
+      padding: 13px 18px; border-radius: 10px; display: none;
+    }
+    .drag-result.correct { background: #e8f7e8; color: #1b5e20; border: 1px solid #81c784; }
+    .drag-result.wrong { background: #fdecea; color: #b71c1c; border: 1px solid #e57373; }
+
+    /* Score finale */
+    .score-card {
+      background: #ffffff; border: 1px solid #f5c0d0; border-radius: 16px;
+      padding: 2.5rem 2rem; text-align: center;
+      box-shadow: 0 2px 16px rgba(212, 83, 126, 0.08);
+    }
+
+    .score-heart { font-size: 52px; margin-bottom: 1rem; }
+    .score-title { font-size: 24px; font-weight: 700; color: #2a1020; margin-bottom: 0.5rem; }
+    .score-sub { font-size: 15px; color: #7a5060; margin-bottom: 1.75rem; line-height: 1.5; }
+    .score-num { font-size: 64px; font-weight: 700; color: #D4537E; line-height: 1; }
+    .score-total { font-size: 16px; color: #a07080; margin-top: 4px; margin-bottom: 2rem; }
+
+    .score-breakdown {
+      background: #fff8fa; border: 1px solid #f5c0d0; border-radius: 12px;
+      padding: 1.25rem 1.5rem; margin-bottom: 2rem; text-align: left;
+    }
+    .breakdown-title {
+      font-size: 11px; font-weight: 700; color: #D4537E;
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;
+    }
+    .breakdown-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0; border-bottom: 1px solid #f5c0d0;
+      font-size: 14px; color: #5a3040;
+    }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-label { color: #7a5060; }
+    .breakdown-val { font-weight: 700; color: #c94070; font-size: 15px; }
+    .breakdown-total-row { margin-top: 4px; padding-top: 12px; border-top: 2px solid #f5c0d0; border-bottom: none; }
+    .breakdown-total-row .breakdown-label { font-weight: 700; color: #2a1020; font-size: 15px; }
+    .breakdown-total-row .breakdown-val { font-size: 18px; }
+
+    .restart-btn {
+      background: #D4537E; color: white; border: none; border-radius: 10px;
+      padding: 13px 36px; font-size: 15px; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: background 0.15s;
+    }
+    .restart-btn:hover { background: #b8375f; }
+
+    @media (max-width: 480px) {
+      .photo-card { width: 100px; height: 100px; }
+      .photo-num { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+<div class="quiz-wrap" id="app"></div>
+
+<script>
+  var questions = [
+    { text: "Chi ha detto 'Ti amo' per la prima volta?", options: ["Sara", "Dario"], answer: "Dario" },
+    { text: "Chi direbbe 'facciamo una lista' prima di qualsiasi cosa?", options: ["Sara", "Dario"], answer: "Sara" },
+    { text: "Chi e' piu' disordinato?", options: ["Sara", "Dario"], answer: "Sara" },
+    { text: "Chi dei due catturerebbe piu' Pokemon ma si dimenticherebbe di salvare il gioco?", options: ["Sara", "Dario"], answer: "Dario" },
+    { text: "Chi dei due e' piu' testardo?", options: ["Sara", "Dario"], answer: "Sara" },
+    { text: "Chi e' che mostra piu' affetto?", options: ["Sara", "Dario"], answer: "Dario" },
+    { text: "A quale appuntamento c'e' stato il primo bacio?", options: ["Quinto appuntamento", "Terzo appuntamento", "Quarto appuntamento"], answer: "Quinto appuntamento" }
+  ];
+
+  var CORRECT_ORDER = [3, 1, 4, 2];
+
+  var currentQ = 0;
+  var score = 0;
+  var photoScore = 0;
+  var answered = false;
+  var photoOrder = [1, 2, 3, 4];
+  var dragSrc = null;
+
+  var app = document.getElementById('app');
+  var tableName = '';
+  var hasStarted = false;
+
+  function render() {
+  if (!hasStarted) {
+    renderIntro();
+  } else if (currentQ < questions.length) {
+    renderQuestion();
+  } else if (currentQ === questions.length) {
+    renderDrag();
+  } else {
+    renderScore();
+  }
+  }
+
+
+  function renderIntro() {
+  app.innerHTML =
+    '<header><h1>Sara &amp; Dario</h1><p>Quanto li conosci?</p></header>' +
+    '<div class="question-card">' +
+      '<div class="q-label">Benvenuto</div>' +
+      '<div class="q-text">Inserisci il nome del tuo tavolo per iniziare.</div>' +
+      '<div style="display:flex; gap:8px; margin-top:10px; align-items:center;">' +
+        '<input id="tableInput" type="text" placeholder="Es. Tavolo Girasole" ' +
+          'style="flex:1; padding:12px 14px; border-radius:10px; border:1px solid #f5c0d0; background:#fff8fa; font-size:15px; color:#3a1828; font-family:inherit;" />' +
+        '<button class="next-btn show" onclick="startQuiz()" style="padding:12px 20px;">Inizia &rarr;</button>' +
+      '</div>' +
+      '<div id="tableError" style="color:#b71c1c; font-size:13px; margin-top:8px; display:none;">Inserisci un nome valido.</div>' +
+    '</div>';
+  // Invio da tastiera
+  setTimeout(function() {
+    var inp = document.getElementById('tableInput');
+    if (inp) {
+      inp.focus();
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') startQuiz();
+      });
+    }
+  }, 0);
+}
+
+function startQuiz() {
+  var inp = document.getElementById('tableInput');
+  var err = document.getElementById('tableError');
+  var val = (inp && inp.value ? inp.value.trim() : '');
+  if (!val) {
+    if (err) err.style.display = 'block';
+    return;
+  }
+  tableName = val;
+  hasStarted = true;
+  currentQ = 0;
+  score = 0;
+  photoScore = 0;
+  answered = false;
+  photoOrder = [1,2,3,4];
+  render();
+}
+
+  function renderQuestion() {
+    var q = questions[currentQ];
+    var total = questions.length + 1;
+    var progress = (currentQ / total) * 100;
+    var header =
+  '<header>' +
+    '<h1>Sara &amp; Dario</h1>' +
+    '<p>Quanto li conosci?</p>' +
+    (tableName ? '<p style="margin-top:6px; font-size:13px; color:#7a5060;"><strong>Tavolo:</strong> ' + tableName + '</p>' : '') +
+  '</header>';
+    var opts = q.options.map(function(o) {
+      return '<button class="opt-btn" onclick="choose(\'' + o.replace(/'/g, "\\'") + '\')">' + o + '</button>';
+    }).join('');
+    var nextLabel = currentQ < questions.length - 1 ? 'Prossima domanda &rarr;' : 'Ultima sfida &rarr;';
+    app.innerHTML = header
+      + '<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:' + progress + '%"></div></div>'
+      + '<div class="step-indicator">Domanda ' + (currentQ + 1) + ' di ' + total + '</div>'
+      + '<div class="question-card">'
+      + '<div class="q-label">Indovina chi!</div>'
+      + '<div class="q-text">' + q.text + '</div>'
+      + '<div class="options">' + opts + '</div>'
+      + '</div>'
+      + '<div class="nav-row"><button class="next-btn" id="nextBtn" onclick="nextQ()">' + nextLabel + '</button></div>';
+    answered = false;
+  }
+
+  function choose(opt) {
+    if (answered) return;
+    answered = true;
+    var correct = questions[currentQ].answer;
+    document.querySelectorAll('.opt-btn').forEach(function(b) {
+      b.disabled = true;
+      if (b.textContent === correct) b.classList.add(b.textContent === opt ? 'correct' : 'reveal');
+      else if (b.textContent === opt) b.classList.add('wrong');
+    });
+    if (opt === correct) score++;
+    document.getElementById('nextBtn').classList.add('show');
+  }
+
+  function nextQ() { currentQ++; render(); }
+
+  function renderDrag() {
+    var total = questions.length + 1;
+    var progress = (questions.length / total) * 100;
+    var header =
+  '<header>' +
+    '<h1>Sara &amp; Dario</h1>' +
+    '<p>Quanto li conosci?</p>' +
+    (tableName ? '<p style="margin-top:6px; font-size:13px; color:#7a5060;"><strong>Tavolo:</strong> ' + tableName + '</p>' : '') +
+  '</header>';
+    app.innerHTML = header
+  + '<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:' + progress + '%"></div></div>'
+  // ... resto invariato
+    
+      + '<div class="step-indicator">Domanda ' + total + ' di ' + total + '</div>'
+      + '<div class="question-card">'
+      + '<div class="q-label">Metti in ordine</div>'
+      + '<div class="q-text">Ordina le foto dalla piu\' antica alla piu\' recente.</div>'
+      + '<div class="drag-instruction">Sul retro di ogni foto c\'e\' un numero da 1 a 4. Trascina le carte per riordinarle in ordine cronologico. Ogni foto nella posizione giusta vale 1 punto.</div>'
+      + '<div class="photo-grid" id="photoGrid"></div>'
+      + '<div class="order-label">Il tuo ordine:</div>'
+      + '<div class="order-display" id="orderDisplay"></div>'
+      + '<button class="check-btn" id="checkBtn" onclick="checkOrder()">Conferma ordine</button>'
+      + '<div class="drag-result" id="dragResult"></div>'
+      + '</div>';
+    photoOrder = [1, 2, 3, 4];
+    renderPhotos();
+  }
+
+  function renderPhotos() {
+    var grid = document.getElementById('photoGrid');
+    if (!grid) return;
+    grid.innerHTML = photoOrder.map(function(n, i) {
+      return '<div class="photo-card" draggable="true"'
+        + ' ondragstart="dragStart(event,' + i + ')"'
+        + ' ondragover="dragOver(event,' + i + ')"'
+        + ' ondrop="dropCard(event,' + i + ')"'
+        + ' ondragleave="dragLeave(event)"'
+        + ' ondragend="dragEnd()">'
+        + '<div class="photo-num">' + n + '</div>'
+        + '<div class="photo-label">Foto</div>'
+        + '</div>';
+    }).join('');
+    updateOrderDisplay();
+  }
+
+  function updateOrderDisplay() {
+    var od = document.getElementById('orderDisplay');
+    if (!od) return;
+    od.innerHTML = photoOrder.map(function(n, i) {
+      return '<div class="order-slot">' + n + '</div>'
+        + (i < photoOrder.length - 1 ? '<span class="order-arrow">&rarr;</span>' : '');
+    }).join('');
+  }
+
+  function dragStart(e, i) {
+    dragSrc = i;
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  function dragEnd() {
+    document.querySelectorAll('.photo-card').forEach(function(c) { c.classList.remove('dragging', 'drag-over'); });
+  }
+  function dragOver(e, i) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.photo-card').forEach(function(c, idx) {
+      idx === i ? c.classList.add('drag-over') : c.classList.remove('drag-over');
+    });
+  }
+  function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+  function dropCard(e, i) {
+    e.preventDefault();
+    if (dragSrc === null || dragSrc === i) return;
+    var arr = photoOrder.slice();
+    var tmp = arr[dragSrc]; arr[dragSrc] = arr[i]; arr[i] = tmp;
+    photoOrder = arr;
+    renderPhotos();
+  }
+
+  function checkOrder() {
+    var result = document.getElementById('dragResult');
+    photoScore = photoOrder.filter(function(n, i) { return n === CORRECT_ORDER[i]; }).length;
+    var isCorrect = photoScore === CORRECT_ORDER.length;
+    result.style.display = 'block';
+    result.className = 'drag-result ' + (isCorrect ? 'correct' : 'wrong');
+    if (isCorrect) {
+      result.textContent = 'Perfetto! Tutte e 4 le foto al posto giusto! +' + photoScore + ' punti';
+    } else {
+      result.textContent = 'Quasi! ' + photoScore + ' foto su 4 nella posizione corretta. Ordine corretto: ' + CORRECT_ORDER.join(' -> ') + '   +' + photoScore + ' punti';
+    }
+    document.getElementById('checkBtn').disabled = true;
+    setTimeout(function() { currentQ++; render(); }, 2800);
+  }
+
+  function renderScore() {
+    var totalScore = score + photoScore;
+    var maxScore = questions.length + CORRECT_ORDER.length;
+    var pct = Math.round((totalScore / maxScore) * 100);
+    var msg;
+    if (pct === 100) msg = 'Punteggio perfetto! Li conoscete alla perfezione!';
+    else if (pct >= 80) msg = 'Ottimo risultato! Vi conoscete davvero bene.';
+    else if (pct >= 50) msg = 'Non male! Qualcosa ancora da scoprire...';
+    else msg = "Forse e' il momento di raccontarsi qualcosa in piu'!";
+    var header =
+  '<header>' +
+    '<h1>Sara &amp; Dario</h1>' +
+    (tableName ? '<p style="margin-top:6px; font-size:13px; color:#7a5060;"><strong>Tavolo:</strong> ' + tableName + '</p>' : '') +
+  '</header>';
+
+app.innerHTML = header + '<div class="score-card">'
+  // ... resto invariato
+
+    app.innerHTML = '<div class="score-card">'
+      + '<div class="score-heart">&#128149;</div>'
+      + '<div class="score-title">Quiz completato!</div>'
+      + '<div class="score-sub">' + msg + '</div>'
+      + '<div class="score-num">' + totalScore + '</div>'
+      + '<div class="score-total">punti su ' + maxScore + '</div>'
+      + '<div class="score-breakdown">'
+        + '<div class="breakdown-title">Dettaglio punteggio</div>'
+        + '<div class="breakdown-row">'
+          + '<span class="breakdown-label">Domande a risposta multipla</span>'
+          + '<span class="breakdown-val">' + score + ' / ' + questions.length + '</span>'
+        + '</div>'
+        + '<div class="breakdown-row">'
+          + '<span class="breakdown-label">Ordine delle foto</span>'
+          + '<span class="breakdown-val">' + photoScore + ' / ' + CORRECT_ORDER.length + '</span>'
+        + '</div>'
+        + '<div class="breakdown-row breakdown-total-row">'
+          + '<span class="breakdown-label">Totale</span>'
+          + '<span class="breakdown-val">' + totalScore + ' / ' + maxScore + '</span>'
+        + '</div>'
+      + '</div>'
+      /*+ '<button class="restart-btn" onclick="restart()">Gioca ancora</button>'*/
+      + '</div>';
+  }
+
+  function restart() {
+    currentQ = 0; score = 0; photoScore = 0;
+    answered = false; photoOrder = [1, 2, 3, 4];
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
